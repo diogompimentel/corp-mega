@@ -539,6 +539,13 @@ async function sincronizar(){
   /* Uma lista do Data Hub em baixo não esvazia a carteira, mas também não
      se esconde: o Perfil di-lo. */
   estado.fontesEmFalta = b.fontesEmFalta || [];
+  /* A List do dinheiro é lida à parte, e um 403 nela é uma resposta
+     legítima — para quem não pode ver o financeiro. Para quem pode, é uma
+     fonte em baixo, e ficava calada: a carteira aparecia inteira, com todos
+     os honorários vazios, com ar de não estarem preenchidos. */
+  if(b.semFinanceiro && estado.financeiro
+     && estado.fontesEmFalta.indexOf("ProjectFinance") < 0)
+    estado.fontesEmFalta = estado.fontesEmFalta.concat(["ProjectFinance"]);
   estado.stale = b.stale;
   estado.lastSync = b.lastSync;
   estado.indice = construir({projetos:estado.projetos, clientes:estado.clientes,

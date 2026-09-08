@@ -9,7 +9,7 @@
        telemóvel seria pôr lá o que se disse que não ia para lá. Os dados
        operacionais vivem em IndexedDB, que a app controla e limpa.
    ======================================================================= */
-const CACHE = "mega-pwa-v1-cc2c5c668d";
+const CACHE = "mega-pwa-v1-0820027aed";
 
 /* A lista sai do bundle, escrita pelo «mobile/build.py» na construção.
    Escrita à mão derivava: uma vista entrava na app e nunca entrava aqui,
