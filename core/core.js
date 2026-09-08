@@ -683,11 +683,22 @@ NUC.frescuraDeUmaFonte = function(bruto, agora){
      informação de hoje — e é por isso que a primeira manda. */
   var referencia = ate || diaDe(gerada);
   var idade = referencia ? diasEntreDias(referencia, agora) : null;
+  var recado = null;
+
+  /* Uma fonte que vai «até» depois de hoje não é fresca: é uma fonte com um
+     registo com data futura. O livro das horas tinha uma linha a 11-09 e o
+     ecrã dizia «há -3 dias», que não quer dizer nada. A idade passa a ser
+     zero — mais fresca do que hoje não há — e o que se sabe diz-se. */
+  if(idade !== null && idade < 0){
+    recado = "esta fonte tem registos com data posterior a hoje"
+           + (ate ? (" — vai até " + ate) : "");
+    idade = 0;
+  }
   var estado = "unknown";
   if(idade !== null) estado = (idade > NUC.DIAS_ATE_FONTE_VELHA) ? "stale" : "ok";
 
   return {status:estado, source:fonte, generatedAt:gerada, sourceThrough:ate,
-          ageDays:idade, message:null};
+          ageDays:idade, message:recado};
 };
 
 NUC.frescuraDeFontes = function(bruto, agora){
