@@ -1,0 +1,288 @@
+/* =======================================================================
+   A PWA operacional — a mesma casa que o Atelier, no tamanho do polegar
+
+   As cores, a tipografia e os cantos vêm de «atelier/tema.css»: papel
+   off-white, tinta quase preta, linhas finas, cantos vivos. Duas apps do
+   mesmo atelier têm de parecer o mesmo atelier — e um telemóvel azul-forte
+   ao lado de um desktop em papel não parecia.
+
+   O que não se copia do desktop é o tamanho. Um botão de 28 px lê-se bem
+   com um rato e falha com um polegar: os alvos aqui têm 44 px, as linhas
+   respiram mais, e a informação por ecrã é menos.
+   ======================================================================= */
+
+@font-face{
+  font-family:"Simplon Norm"; font-weight:400; font-style:normal; font-display:swap;
+  src:url("./fontes/SimplonNorm-Regular.otf") format("opentype");
+}
+@font-face{
+  font-family:"Simplon Norm"; font-weight:700; font-style:normal; font-display:swap;
+  src:url("./fontes/SimplonNorm-Medium.otf") format("opentype");
+}
+@font-face{
+  font-family:"Simplon Mono"; font-weight:400; font-style:normal; font-display:swap;
+  src:url("./fontes/SimplonMono-Regular.otf") format("opentype");
+}
+
+:root{
+  /* as cores da casa, tal como em atelier/tema.css */
+  --tinta:#111;
+  --muted:#6b6b6b;
+  --linha:#e3e3e3;
+  --soft:#f2f0eb;
+  --fundo:#faf9f6;
+  --papel:#fff;
+  /* os estados, também do Atelier */
+  --erro:#b3261e;
+  --aviso:#8a5a00;
+  --ok:#1c7c3f;
+  --tap-min:44px;
+  --raio:3px;
+  --esp:20px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:"Simplon Norm",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.5;
+  color:var(--tinta); background:var(--fundo);
+  -webkit-text-size-adjust:100%;
+  padding-top:calc(52px + env(safe-area-inset-top));
+  padding-bottom:calc(64px + env(safe-area-inset-bottom));
+}
+
+/* ---------- topo e fundo ------------------------------------------------ */
+.topo{
+  position:fixed; top:0; left:0; right:0; z-index:10;
+  height:calc(52px + env(safe-area-inset-top));
+  padding:env(safe-area-inset-top) var(--esp) 0;
+  display:flex; align-items:center; gap:12px;
+  background:var(--fundo); border-bottom:1px solid var(--linha);
+}
+/* a marca é a mono com o espacejamento do Atelier */
+.marca{
+  border:0; background:none; padding:0 4px; color:var(--tinta);
+  font-family:"Simplon Mono",ui-monospace,monospace;
+  font-size:.82rem; letter-spacing:.14em;
+  min-height:var(--tap-min);
+}
+.estado-sync{margin-left:auto; font-size:.72rem; color:var(--muted);}
+.estado-sync[data-estado="offline"]{color:var(--aviso);}
+.estado-sync[data-estado="offline"]::before{content:"◍ ";}
+.estado-sync[data-estado="a-sincronizar"]::before{content:"↻ ";}
+.estado-sync[data-estado="erro"]{color:var(--erro);}
+.estado-sync[data-estado="erro"]::before{content:"✗ ";}
+.perfil{
+  border:0; background:none; font-size:1.2rem; color:var(--muted);
+  min-width:var(--tap-min); min-height:var(--tap-min);
+}
+
+.fundo{
+  position:fixed; bottom:0; left:0; right:0; z-index:10;
+  display:grid; grid-template-columns:repeat(4,1fr);
+  padding-bottom:env(safe-area-inset-bottom);
+  background:var(--fundo); border-top:1px solid var(--linha);
+}
+.fundo a{
+  min-height:var(--tap-min); padding:9px 0 11px;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  font-size:.68rem; letter-spacing:.04em; color:var(--muted); text-decoration:none;
+}
+/* como as abas do Atelier: a que está aberta ganha o traço e a tinta */
+.fundo a[aria-current="page"]{
+  color:var(--tinta); font-weight:700;
+  box-shadow:inset 0 2px 0 var(--tinta);
+}
+.fundo .ico{font-size:1.05rem; line-height:1;}
+
+/* ---------- palco ------------------------------------------------------- */
+main{padding:var(--esp); max-width:720px; margin:0 auto;}
+h1{font-size:1.3rem; font-weight:700; margin:0 0 2px; letter-spacing:-.01em;}
+h2{font-size:.86rem; font-weight:700; margin:26px 0 8px;
+   letter-spacing:.06em; text-transform:uppercase; color:var(--muted);}
+.sub{color:var(--muted); font-size:.78rem; margin:0 0 18px;}
+
+/* ---------- listas tocáveis --------------------------------------------- */
+.lista{list-style:none; margin:0; padding:0;
+       border-top:1px solid var(--linha);}
+.lista li{border-bottom:1px solid var(--linha);}
+.linha{
+  background:none; border:0; border-radius:0;
+  padding:14px 2px; min-height:var(--tap-min);
+  display:flex; flex-direction:column; gap:3px;
+  text-align:left; width:100%; font:inherit; color:inherit;
+}
+.linha:active{background:var(--soft);}
+.linha .titulo{font-weight:700; font-size:.98rem;}
+.linha .meta{font-size:.76rem; color:var(--muted);}
+
+/* a informação crítica nunca depende só da cor: leva sempre uma palavra */
+.etiq{
+  display:inline-block; align-self:flex-start; margin-top:2px;
+  font-size:.68rem; letter-spacing:.04em;
+  padding:2px 8px; border-radius:999px;
+  border:1px solid var(--linha); background:var(--papel); color:var(--muted);
+}
+.etiq-vencido{border-color:var(--erro); color:var(--erro);}
+.etiq-hoje{border-color:var(--tinta); color:var(--tinta);}
+.etiq-bloqueio{border-color:var(--erro); color:var(--erro);}
+
+/* ---------- ficha de projeto -------------------------------------------- */
+.cartao{
+  background:var(--papel); border:1px solid var(--linha); border-radius:var(--raio);
+  padding:14px 16px; margin-bottom:12px;
+}
+.cartao b{font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+          color:var(--muted); display:block; margin-bottom:4px;}
+.cartao p{margin:0;}
+.dinheiro{width:100%; border-collapse:collapse; font-size:.86rem;}
+.dinheiro td{padding:8px 0; border-bottom:1px solid var(--linha);}
+.dinheiro td:last-child{text-align:right; font-variant-numeric:tabular-nums;}
+.dinheiro tr:last-child td{border-bottom:0;}
+.porconfirmar{color:var(--muted); font-style:normal; font-size:.8rem;}
+
+.acoes{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:14px 0;}
+.acao{
+  min-height:var(--tap-min); border-radius:var(--raio);
+  border:1px solid var(--tinta); background:var(--papel); color:var(--tinta);
+  font:inherit; font-size:.82rem;
+  display:flex; align-items:center; justify-content:center; text-decoration:none;
+}
+.acao-forte{background:var(--tinta); color:var(--fundo);}
+.acao:active{background:var(--soft);}
+/* um botão que não faz nada tem de se ver que não faz: sem contorno e em
+   surdina, senão toca-se nele e não acontece nada */
+.acao:disabled{
+  border-color:var(--linha); color:var(--muted); background:var(--soft);
+  border-style:dashed;
+}
+
+/* ---------- estados ----------------------------------------------------- */
+.skeleton{display:flex; flex-direction:column; gap:1px;}
+.skeleton-linha{
+  height:56px; border-bottom:1px solid var(--linha);
+  background:linear-gradient(90deg,var(--soft) 25%,var(--fundo) 50%,var(--soft) 75%);
+  background-size:200% 100%; animation:brilho 1.3s linear infinite;
+}
+@keyframes brilho{from{background-position:200% 0;} to{background-position:-200% 0;}}
+@media (prefers-reduced-motion:reduce){.skeleton-linha{animation:none;}}
+
+.vazio{padding:40px 0; color:var(--muted); line-height:1.6; max-width:44ch;}
+.vazio b{display:block; color:var(--tinta); margin-bottom:4px;}
+.erro{
+  padding:12px 14px; border:1px solid var(--erro); color:var(--erro);
+  border-radius:var(--raio); font-size:.8rem; margin-bottom:14px;
+}
+.velho{
+  padding:10px 14px; border:1px solid #e0cfa0; background:#fdf8ec;
+  color:var(--aviso); border-radius:var(--raio); font-size:.76rem; margin-bottom:14px;
+}
+
+/* ---------- campos ------------------------------------------------------ */
+input[type="search"], input[type="text"], textarea, select{
+  width:100%; min-height:var(--tap-min); font:inherit; font-size:1rem; color:inherit;
+  padding:10px 12px; border:1px solid var(--linha); border-radius:var(--raio);
+  background:var(--papel);
+}
+input:focus, textarea:focus, select:focus{border-color:var(--tinta); outline:none;}
+label{display:block; font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--muted); margin:14px 0 4px;}
+
+.folha{
+  position:fixed; left:0; right:0; bottom:0; z-index:20;
+  background:var(--papel); border-top:1px solid var(--linha);
+  border-radius:var(--raio) var(--raio) 0 0;
+  padding:20px var(--esp) calc(20px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 30px rgba(0,0,0,.12);
+}
+.folha h2{margin-top:0;}
+
+:focus-visible{outline:2px solid var(--tinta); outline-offset:2px;}
+
+/* =======================================================================
+   Ecrã grande — o PC do escritório
+
+   A mesma app, sem fingir que é um telemóvel esticado. Três coisas mudam:
+   a navegação sobe para junto do cabeçalho (é onde o Atelier a tem e é
+   onde o rato já a procura), as listas passam a duas colunas porque uma
+   linha de 1200 px com três palavras é desperdício, e cada linha deixa de
+   ser um bloco empilhado para ser uma linha de facto — título à esquerda,
+   estado à direita, como uma tabela se lê.
+
+   Os alvos continuam com 44 px. Um ecrã grande não é prova de que não há
+   um dedo do outro lado — há portáteis com toque — e 44 px também não
+   incomoda quem usa rato.
+   ======================================================================= */
+@media (min-width:900px){
+  body{
+    padding-top:calc(52px + 46px);
+    padding-bottom:32px;
+  }
+
+  /* a navegação encosta ao cabeçalho, alinhada à esquerda como as abas
+     do Atelier — não esticada por todo o ecrã */
+  .fundo{
+    top:52px; bottom:auto;
+    grid-template-columns:repeat(4,minmax(0,132px));
+    justify-content:start;
+    padding:0 max(var(--esp),calc((100vw - 1040px)/2));
+    border-top:0; border-bottom:1px solid var(--linha);
+  }
+  .fundo a{
+    flex-direction:row; gap:8px;
+    justify-content:flex-start;
+    padding:0 12px; font-size:.78rem;
+  }
+  .fundo a[aria-current="page"]{
+    box-shadow:inset 0 -2px 0 var(--tinta);
+  }
+
+  main{max-width:1040px;}
+  h1{font-size:1.5rem;}
+
+  /* duas colunas: os <li> são independentes, o grid não parte nada */
+  .lista{
+    display:grid; grid-template-columns:1fr 1fr;
+    column-gap:36px;
+    border-top:1px solid var(--linha);
+  }
+  /* a linha lê-se como uma linha: título à esquerda, estado à direita */
+  .linha{
+    flex-direction:row; align-items:baseline; gap:12px;
+    padding:12px 4px;
+  }
+  .linha .meta{margin-left:auto; text-align:right; white-space:nowrap;}
+  .linha .etiq{align-self:center; margin-top:0; flex:0 0 auto;}
+
+  .acoes{grid-template-columns:repeat(4,1fr);}
+  .cartao{padding:16px 18px;}
+  .vazio{padding:56px 0;}
+}
+
+/* ---------- rato --------------------------------------------------------
+   No telemóvel só existe :active. Com rato, uma linha que não reage ao
+   passar por cima parece morta — mas o realce só aparece onde há rato a
+   sério, para não ficar colado depois de um toque. */
+@media (hover:hover) and (pointer:fine){
+  .linha:hover{background:var(--soft);}
+  .acao:hover{background:var(--soft);}
+  .acao-forte:hover{background:#000;}
+  .acao:disabled:hover{background:var(--soft); cursor:not-allowed;}
+  .fundo a:hover{color:var(--tinta);}
+  .linha,.acao,.marca,.perfil{cursor:pointer;}
+}
+
+/* Uma linha que leva a outro ecrã tem de se sentir carregável — e tem de
+   dizer onde está o foco de quem navega por teclado. */
+.linha.ligavel{cursor:pointer}
+.linha.ligavel:active{background:var(--realce,rgba(0,0,0,.05))}
+.linha.ligavel:focus-visible{outline:2px solid var(--acento,#0029bf);outline-offset:-2px}
+/* «19.000 € · 1 por saber»: a ressalva não pode ter o peso do número. */
+.porsaber{font-weight:400;opacity:.75}
+
+/* Texto que só existe para quem ouve o ecrã. Não se usa «display:none»
+   nem «visibility:hidden»: isso tira-o também aos leitores de ecrã. */
+.so-se-ouve{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0;
+}

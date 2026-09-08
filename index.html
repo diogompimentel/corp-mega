@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf9f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CO.RP">
+<title>CO.RP · OPERE</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header class="topo">
+  <!-- Quem usa comando de voz diz o que vê. A explicação vem a seguir ao
+       nome da marca, não em vez dele: o nome acessível fica «CO.RP —
+       trocar de marca» e serve os dois. -->
+  <button type="button" class="marca" data-acao="trocar-marca">
+    <span id="marcaAtual">CO.RP</span><span class="so-se-ouve"> — trocar de marca</span>
+  </button>
+  <span class="estado-sync" id="estadoSync" role="status" aria-live="polite"></span>
+  <button type="button" class="perfil" data-rota-ir="perfil" aria-label="Perfil e sincronização">⋯</button>
+</header>
+
+<main id="palco" tabindex="-1">
+  <div class="skeleton" aria-hidden="true">
+    <div class="skeleton-linha"></div><div class="skeleton-linha"></div><div class="skeleton-linha"></div>
+  </div>
+</main>
+
+<nav class="fundo" aria-label="Navegação principal">
+  <a href="#/hoje" data-rota="hoje"><span class="ico" aria-hidden="true">◎</span>Hoje</a>
+  <a href="#/projetos" data-rota="projetos"><span class="ico" aria-hidden="true">▤</span>Projetos</a>
+  <a href="#/tarefas" data-rota="tarefas"><span class="ico" aria-hidden="true">✓</span>Tarefas</a>
+  <a href="#/pesquisa" data-rota="pesquisa"><span class="ico" aria-hidden="true">⌕</span>Pesquisa</a>
+</nav>
+
+<script src="./vendor/msal-browser.min.js"></script>
+<script src="./core/core.js"></script>
+<script src="./config.js" onerror="window.__semConfig=true"></script>
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>
