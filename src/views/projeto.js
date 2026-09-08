@@ -41,9 +41,16 @@ export function render(modelo){
     + (p.operationalState ? " · " + esc(p.operationalState) : "")
     + (p.location ? " · " + esc(p.location) : "") + '</p>'
 
-    + (p.nextAction
-        ? '<div class="cartao"><b>Próxima ação</b><p>' + esc(p.nextAction) + '</p></div>'
-        : '')
+    /* A próxima ação é a pergunta do dia — «o que é que isto está à espera
+       que aconteça». Escrevia-se só a partir do Hoje, e só quando o projeto
+       já lá estava por não a ter. Aqui está sempre à mão. */
+    + '<div class="cartao"><b>Próxima ação</b>'
+    + (p.nextAction ? '<p>' + esc(p.nextAction) + '</p>'
+                    : '<p class="porsaber">por definir</p>')
+    + '<div class="acoes"><button type="button" class="acao'
+    + (p.nextAction ? '' : ' acao-forte') + '" data-acao="definir-proxima-acao"'
+    + ' data-projeto="' + esc(p.id) + '">'
+    + (p.nextAction ? 'Alterar' : 'Definir') + '</button></div></div>'
     + (conflito && !modelo.semFinanceiro
         ? '<div class="erro" role="alert">Honorários a rever: já foi faturado mais do que os '
           + 'honorários conhecidos.</div>'

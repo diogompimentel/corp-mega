@@ -90,8 +90,11 @@ export function criarDataHub({graph, siteId, listas}){
 /* «Collaborations» e «Awards» são recentes: um Data Hub que ainda não as
    tenha responde com erro, e isso é uma fonte em falta como as outras — a
    carteira continua, e o telemóvel diz o que não conseguiu ler. */
+/* «NotesDecisions» era escrita e nunca lida: uma nota escrita no telemóvel
+   desaparecia do ecrã na recarga seguinte, e nenhuma nota do computador
+   chegava cá. Escrever num sítio que ninguém lê é a pior das duas metades. */
 const LISTAS = ["Projects", "Clients", "Tasks", "Consultations", "Conflicts",
-                "Collaborations", "Awards", "AppMeta"];
+                "Collaborations", "Awards", "NotesDecisions", "AppMeta"];
 
 /* Todas as Lists de que a app precisa, dita por quem as lê e escreve. O
    «config.js» tinha a lista à mão e ficou para trás: faltavam-lhe
@@ -104,7 +107,8 @@ export const LISTAS_NECESSARIAS = LISTAS.concat(
    "Aliases", "SyncRuns"]);
 const CHAVE = {Projects:"projects", Clients:"clients", Tasks:"tasks",
                Consultations:"consultations", Conflicts:"quality",
-               Collaborations:"collaborations", Awards:"awards", AppMeta:"meta"};
+               Collaborations:"collaborations", Awards:"awards",
+               NotesDecisions:"notes", AppMeta:"meta"};
 
 /* O dinheiro vive na List «ProjectFinance», que pode ter permissões
    próprias. Quem não lhe chega recebe um 403 — e isso não é uma fonte em
@@ -136,7 +140,7 @@ async function juntarFinanceiro(hub, projetos){
 
 export async function carregarCarteira(hub){
   const carteira = {projects:[], clients:[], tasks:[], consultations:[], quality:[],
-                    collaborations:[], awards:[], meta:[], fontesEmFalta:[]};
+                    collaborations:[], awards:[], notes:[], meta:[], fontesEmFalta:[]};
 
   const projetos = await hub.list("Projects");
   const comDinheiro = await juntarFinanceiro(hub, projetos || []);

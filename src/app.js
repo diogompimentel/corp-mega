@@ -31,7 +31,7 @@ const estado = {
   projetos:[], clientes:[], consultas:[], tarefas:[], qualidade:[], notas:[],
   colaboracoes:[], premios:[],
   stale:false, lastSync:null, indice:[], consulta:"", filtro:"",
-  utilizador:null, sync:"ok", erro:null, marca:"corp",
+  utilizador:null, sync:"ok", erro:null, marca:"corp", clienteEmFoco:null,
   /* O calendário editorial não vem do Data Hub: é lido do Organização.xlsx
      pelo Graph, a pedido, e por isso tem estado próprio. Não se guarda —
      um calendário velho em cache seria pior do que nenhum. */
@@ -63,6 +63,18 @@ function comRotulos(projetos){
 function ordenarCarteira(lista){
   return (window.NUC && typeof window.NUC.ordenarProjetos === "function")
     ? window.NUC.ordenarProjetos(lista) : (lista || []);
+}
+/* A List guarda o texto em «Payload»; o telemóvel escreve-o em «text». As
+   duas formas leem-se aqui, uma vez, em vez de em cada sítio que as mostra. */
+function notaCanonica(n){
+  if(!n) return n;
+  let texto = n.text || n.texto || null;
+  if(!texto && n.Payload){
+    try{ texto = (JSON.parse(n.Payload) || {}).text || null; }catch(e){ texto = null; }
+  }
+  return Object.assign({}, n, {
+    id:n.id || n.EntityId, projectId:n.projectId || n.ProjectId || null,
+    text:texto || n.Title || "", createdAt:n.createdAt || n.CreatedAt || null});
 }
 function projetoPorId(id){
   return estado.projetos.filter(p => p.id === id)[0] || null;
@@ -115,7 +127,9 @@ function pintar(){
     });
   }
   else if(r.nome === "tarefas") html += verTarefas(Object.assign({tarefas:estado.tarefas}, comum));
-  else if(r.nome === "clientes") html += verClientes(Object.assign({clientes:estado.clientes}, comum));
+  else if(r.nome === "clientes")
+    html += verClientes(Object.assign({clientes:estado.clientes,
+                                       destaque:estado.clienteEmFoco}, comum));
   else if(r.nome === "colaboracoes")
     html += verColaboracoes(Object.assign({colaboracoes:estado.colaboracoes,
                                            premios:estado.premios,
@@ -205,7 +219,13 @@ function ligarGestos(){
 
 async function executar(acao, dados){
   try{
-    if(acao === "abrir-projeto") return router.ir("projeto", dados.projeto);
+    if(acao === "abrir-projeto") return router.ir("projeto", dados.projeto || dados.item);
+    /* Um cliente encontrado na pesquisa levava a lado nenhum: o botão
+       existia e não fazia nada. Vai para a lista, com ele à cabeça. */
+    if(acao === "abrir-cliente"){
+      estado.clienteEmFoco = dados.item || null;
+      return router.ir("clientes");
+    }
     if(acao === "abrir-tarefa" || acao === "concluir-tarefa") return concluirTarefa(dados.item);
     /* Uma exceção de qualidade é sempre de um projeto: mandar quem lhe toca
        para a lista de todos era fazê-lo procurar aquele que acabou de
@@ -354,15 +374,20 @@ async function novaTarefa(projectId){
     async titulo => {
       if(!titulo) return;
       const id = uuid();
+      const p = projetoPorId(projectId);
       /* A tarefa aparece já: quem a escreveu tem de a ver, com rede ou sem
          ela. O «pendente» diz que ainda não chegou ao Data Hub. */
-      estado.tarefas = estado.tarefas.concat([{id, projectId, title:titulo,
-        status:"aberta", dueAt:null, pendente:true}]);
-      await store.put("tasks", {id, projectId, title:titulo, status:"aberta",
-                                dueAt:null, pendente:true});
+      const nova = {id, projectId, folderRef:p && p.folderRef, title:titulo,
+                    status:"aberta", dueAt:null, pendente:true};
+      estado.tarefas = estado.tarefas.concat([nova]);
+      await store.put("tasks", nova);
       await sync.mutate({type:"task.create", entity:"Tasks", id, projectId,
                          payload:{Title:titulo, EntityId:id, ProjectId:projectId,
                                   Status:"aberta"}});
+      /* E ao ficheiro do projeto, que é a fonte: escrita só na List, a
+         tarefa vivia no SharePoint e não existia para quem abre o processo
+         no computador. Vai com o mesmo id — outro fazia dela duas. */
+      if(p && p.folderRef) await mandarAoProjeto("task.create", p, titulo, {id});
       await actualizarPendentes();
       pintar();
     });
@@ -371,29 +396,39 @@ async function novaTarefa(projectId){
 async function concluirTarefa(id){
   const t = estado.tarefas.filter(x => x.id === id)[0];
   if(!t) return;
-  t.status = "concluida";
+  t.status = "feita";
   t.completedAt = new Date().toISOString();
   t.pendente = true;
   await store.put("tasks", t);
   await sync.mutate({type:"task.complete", entity:"Tasks", id, projectId:t.projectId,
                      baseVersion:t.__etag || null,
-                     payload:{Status:"concluida", UpdatedAt:t.completedAt}});
+                     payload:{Status:"feita", UpdatedAt:t.completedAt}});
+  const p = projetoPorId(t.projectId);
+  const pasta = t.folderRef || (p && p.folderRef);
+  if(pasta) await mandarAoProjeto("task.complete", {id:t.projectId, folderRef:pasta},
+                                  "feita", {id});
   await actualizarPendentes();
   pintar();
 }
 
 async function novaNota(projectId){
-  folha("Nota ou decisão",
+  folha("Nota",
     '<label for="n">O que ficou dito</label><textarea id="n" data-valor rows="4"></textarea>',
     async texto => {
       if(!texto) return;
       const id = uuid();
-      estado.notas = estado.notas.concat([{id, projectId, text:texto,
-        createdAt:new Date().toISOString(), pendente:true}]);
+      const p = projetoPorId(projectId);
+      const nota = {id, projectId, text:texto,
+                    createdAt:new Date().toISOString(), pendente:true};
+      estado.notas = estado.notas.concat([nota]);
+      await store.put("notes", nota);
       await sync.mutate({type:"note.create", entity:"NotesDecisions", id, projectId,
                          payload:{Title:texto.slice(0, 60), EntityId:id, ProjectId:projectId,
                                   Type:"note", CreatedAt:new Date().toISOString(),
                                   Payload:JSON.stringify({text:texto})}});
+      /* E à cronologia do processo, que é onde quem abre o projeto no
+         computador a vai encontrar. */
+      if(p && p.folderRef) await mandarAoProjeto("note.create", p, texto);
       await actualizarPendentes();
       pintar();
     });
@@ -450,14 +485,14 @@ async function definirProximaAcao(projectId){
 /* Um comando é a única escrita que chega ao ficheiro do projeto. Leva a
    pasta porque é por ela que o Mac o encontra — procurar por semelhança de
    nomes seria decidir uma identidade por parecença. */
-async function mandarAoProjeto(tipo, p, valor){
+async function mandarAoProjeto(tipo, p, valor, extra){
   const id = uuid();
+  const carga = Object.assign({folderRef:p.folderRef, valor:valor,
+                               quem:(estado.utilizador || {}).upn || null,
+                               quando:new Date().toISOString()}, extra || {});
   await sync.mutate({type:tipo, entity:"Commands", id, projectId:p.id,
     payload:{Title:tipo, EntityId:id, Type:tipo, EntityRef:p.id, Status:"pending",
-             CreatedAt:new Date().toISOString(),
-             Payload:JSON.stringify({folderRef:p.folderRef, valor:valor,
-                                     quem:(estado.utilizador || {}).upn || null,
-                                     quando:new Date().toISOString()})}});
+             CreatedAt:new Date().toISOString(), Payload:JSON.stringify(carga)}});
   await actualizarPendentes();
 }
 
@@ -492,6 +527,9 @@ async function sincronizar(){
   estado.tarefas = b.tasks || [];
   estado.consultas = b.consultations || [];
   estado.qualidade = b.quality || [];
+  /* As notas voltam do Data Hub como tudo o resto: escritas só em memória,
+     desapareciam na recarga seguinte. */
+  estado.notas = (b.notes || []).map(notaCanonica);
   /* Colaborações e prémios são de uma marca só, como os projetos: somar as
      duas contabilidades num total era inventar um número que ninguém tem. */
   estado.colaboracoes = (b.collaborations || []).filter(c =>
@@ -504,6 +542,7 @@ async function sincronizar(){
   estado.stale = b.stale;
   estado.lastSync = b.lastSync;
   estado.indice = construir({projetos:estado.projetos, clientes:estado.clientes,
+                             tarefas:estado.tarefas,
                              consultas:estado.consultas});
   if(!b.stale) await sync.flushOutbox();
   await actualizarPendentes();
@@ -607,19 +646,21 @@ async function arrancar(){
 
 async function sincronizarLocal(){
   const [projects, clients, tasks, consultations, quality,
-         collaborations, awards] = await Promise.all([
+         collaborations, awards, notes] = await Promise.all([
     store.getAll("projects"), store.getAll("clients"), store.getAll("tasks"),
     store.getAll("consultations"), store.getAll("quality"),
-    store.getAll("collaborations"), store.getAll("awards")
+    store.getAll("collaborations"), store.getAll("awards"), store.getAll("notes")
   ]);
   estado.projetos = comRotulos(projects); estado.clientes = clients; estado.tarefas = tasks;
   estado.consultas = consultations; estado.qualidade = quality;
+  estado.notas = (notes || []).map(notaCanonica);
   estado.colaboracoes = (collaborations || []).filter(c =>
     !c.brand || c.brand === estado.marca);
   estado.premios = (awards || []).filter(p => !p.brand || p.brand === estado.marca);
   estado.lastSync = await store.meta("lastSync");
   estado.stale = !!estado.lastSync;
-  estado.indice = construir({projetos:projects, clientes:clients, consultas:consultations});
+  estado.indice = construir({projetos:projects, clientes:clients,
+                             tarefas:tasks, consultas:consultations});
   await actualizarPendentes();
 }
 

@@ -113,6 +113,10 @@ h2{font-size:.86rem; font-weight:700; margin:26px 0 8px;
   text-align:left; width:100%; font:inherit; color:inherit;
 }
 .linha:active{background:var(--soft);}
+/* Quem chega de uma pesquisa vem à procura de um: fica à cabeça e com uma
+   marca, para não ter de o procurar outra vez dentro da lista. */
+.linha.destacado{background:var(--soft); box-shadow:inset 3px 0 0 var(--tinta);
+  padding-left:10px;}
 .linha .titulo{font-weight:700; font-size:.98rem;}
 .linha .meta{font-size:.76rem; color:var(--muted);}
 

@@ -1075,7 +1075,11 @@ NUC.itensDeHoje = function(dados){
   var fila = [];
 
   (dados.tasks || []).forEach(function(t){
-    if(!t || t.status === "concluida" || t.status === "concluído" || t.completedAt) return;
+    /* O vocabulário do núcleo é «aberta / feita / dispensada»; «concluida»
+       é o que o telemóvel escrevia. Aceitam-se os dois — o que não se pode
+       é pôr no Hoje uma tarefa que alguém já fechou. */
+    if(!t || t.completedAt) return;
+    if(t.status && t.status !== "aberta") return;
     var p = projetoDe(projetos, t.projectId);
     fila.push(item({id:t.id, type:"task", projectId:t.projectId || null,
       clientId:(p && p.clientId) || t.clientId || null, title:t.title,

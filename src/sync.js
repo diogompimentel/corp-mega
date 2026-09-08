@@ -99,20 +99,21 @@ export function criarBootstrap({store, carregar}){
         store.clear("tasks").then(() => store.putMany("tasks", novo.tasks || [])),
         store.clear("quality").then(() => store.putMany("quality", novo.quality || [])),
         store.clear("collaborations").then(() => store.putMany("collaborations", novo.collaborations || [])),
-        store.clear("awards").then(() => store.putMany("awards", novo.awards || []))
+        store.clear("awards").then(() => store.putMany("awards", novo.awards || [])),
+        store.clear("notes").then(() => store.putMany("notes", novo.notes || []))
       ]);
       await store.meta("lastSync", agora);
       return Object.assign({stale:false, lastSync:agora}, novo);
     }catch(e){
       const [projects, clients, consultations, tasks, quality,
-             collaborations, awards] = await Promise.all([
+             collaborations, awards, notes] = await Promise.all([
         store.getAll("projects"), store.getAll("clients"), store.getAll("consultations"),
         store.getAll("tasks"), store.getAll("quality"),
-        store.getAll("collaborations"), store.getAll("awards")
+        store.getAll("collaborations"), store.getAll("awards"), store.getAll("notes")
       ]);
       return {stale:true, lastSync:await store.meta("lastSync"),
               projects, clients, consultations, tasks, quality,
-              collaborations, awards,
+              collaborations, awards, notes,
               erro:String(e && e.message || e)};
     }
   };
