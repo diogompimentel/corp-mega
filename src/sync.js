@@ -82,32 +82,6 @@ export function criarSync({store, estaOnline, enviar, aoMudarEstado}){
   return {mutate, flushOutbox, pendentes};
 }
 
-/* ---------- o timer de horas --------------------------------------------
-   O timer vive no armazém, não em memória: fechar a app no bolso não pode
-   perder uma hora de trabalho. Parar produz um comando idempotente — o Mac
-   é que sabe escrever no Hours Tracker. */
-export function criarTimer({store}){
-  async function activo(){
-    return await store.meta("timer");
-  }
-  async function iniciar(projectId, quando){
-    const t = {projectId, startedAt:quando || new Date().toISOString(), id:uuid()};
-    await store.meta("timer", t);
-    return t;
-  }
-  async function parar(quando){
-    const t = await store.meta("timer");
-    if(!t) return null;
-    await store.meta("timer", null);
-    return {
-      type:"hours.add", entity:"Commands", mutationId:t.id,
-      projectId:t.projectId,
-      payload:{projectId:t.projectId, startedAt:t.startedAt,
-               endedAt:quando || new Date().toISOString()}
-    };
-  }
-  return {activo, iniciar, parar};
-}
 
 /* ---------- o arranque ---------------------------------------------------
    Com rede, traz o retrato novo e guarda-o. Sem rede, devolve o último que

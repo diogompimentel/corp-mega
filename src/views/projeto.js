@@ -31,7 +31,10 @@ export function render(modelo){
   const mail = c && (c.emails || [])[0];
   const mapa = morada(p);
   const conflito = (p.health || []).indexOf("fees-review") >= 0;
-  const timer = modelo.timer || null;
+  /* Houve aqui um cronómetro de horas. Saiu: as horas que ele contava
+     nunca chegavam ao Hours Tracker — o comando ficava «failed» no Data Hub
+     — e um botão que promete o que não cumpre é pior do que a ausência
+     dele. As horas continuam a contar-se onde sempre se contaram. */
 
   return '<h1>' + esc(p.name || p.folderRef || "projeto") + '</h1>'
     + '<p class="sub">' + esc(fase(p.phase, p.phaseLabel) || "fase por saber")
@@ -98,9 +101,6 @@ export function render(modelo){
     + ' data-projeto="' + esc(p.id) + '">Nota/decisão</button>'
     + '<button type="button" class="acao" data-acao="mudar-estado"'
     + ' data-projeto="' + esc(p.id) + '">Estado</button>'
-    + '<button type="button" class="acao' + (timer ? " acao-forte" : "") + '" data-acao="timer"'
-    + ' data-projeto="' + esc(p.id) + '">'
-    + (timer ? "Parar horas" : "Iniciar horas") + '</button>'
     + '</div>'
 
     + (modelo.tarefas && modelo.tarefas.length

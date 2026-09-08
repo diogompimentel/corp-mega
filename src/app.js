@@ -5,7 +5,7 @@
    ======================================================================= */
 import {criarRouter} from "./router.js";
 import {criarStore} from "./store.js";
-import {criarSync, criarTimer, criarBootstrap, uuid} from "./sync.js";
+import {criarSync, criarBootstrap, uuid} from "./sync.js";
 import {criarGraph} from "./graph.js";
 import {criarDataHub, descobrirSite, carregarCarteira, LISTAS_NECESSARIAS} from "./datahub.js";
 import {construir, procurar} from "./search.js";
@@ -30,7 +30,7 @@ const ROTAS = ["hoje", "projetos", "projeto", "tarefas", "clientes", "financeiro
 const estado = {
   projetos:[], clientes:[], consultas:[], tarefas:[], qualidade:[], notas:[],
   colaboracoes:[], premios:[],
-  stale:false, lastSync:null, indice:[], consulta:"", filtro:"", timer:null,
+  stale:false, lastSync:null, indice:[], consulta:"", filtro:"",
   utilizador:null, sync:"ok", erro:null, marca:"corp",
   /* O calendário editorial não vem do Data Hub: é lido do Organização.xlsx
      pelo Graph, a pedido, e por isso tem estado próprio. Não se guarda —
@@ -42,7 +42,7 @@ const estado = {
   financeiro:false
 };
 
-let store = null, sync = null, timer = null, hub = null, router = null, organizacao = null;
+let store = null, sync = null, hub = null, router = null, organizacao = null;
 const palco = () => document.getElementById("palco");
 
 /* ---------- o modelo de cada ecrã --------------------------------------- */
@@ -111,8 +111,7 @@ function pintar(){
         && t.status !== "concluida" && !t.completedAt),
       notas:estado.notas.filter(n => n.projectId === (p && p.id)),
       documentos:p && p.documentsUrl,
-      licenciamento:p && p.licensing,
-      timer:estado.timer && estado.timer.projectId === (p && p.id) ? estado.timer : null
+      licenciamento:p && p.licensing
     });
   }
   else if(r.nome === "tarefas") html += verTarefas(Object.assign({tarefas:estado.tarefas}, comum));
@@ -224,7 +223,6 @@ async function executar(acao, dados){
     if(acao === "nova-tarefa") return novaTarefa(dados.projeto);
     if(acao === "nova-nota") return novaNota(dados.projeto);
     if(acao === "mudar-estado") return mudarEstado(dados.projeto);
-    if(acao === "timer") return alternarTimer(dados.projeto);
     if(acao === "login") return auth.login();
     if(acao === "logout") return auth.logout();
     if(acao === "sincronizar") return sincronizar();
@@ -463,26 +461,6 @@ async function mandarAoProjeto(tipo, p, valor){
   await actualizarPendentes();
 }
 
-async function alternarTimer(projectId){
-  const activo = await timer.activo();
-  if(activo && activo.projectId === projectId){
-    const comando = await timer.parar();
-    estado.timer = null;
-    if(comando){
-      await sync.mutate(Object.assign({}, comando, {
-        payload:{Title:"hours.add", EntityId:comando.mutationId, Type:"hours.add",
-                 EntityRef:projectId, Status:"pending",
-                 CreatedAt:new Date().toISOString(),
-                 Payload:JSON.stringify(comando.payload)}
-      }));
-    }
-  }else{
-    estado.timer = await timer.iniciar(projectId);
-  }
-  await actualizarPendentes();
-  pintar();
-}
-
 async function trocarMarca(){
   estado.marca = estado.marca === "corp" ? "opere" : "corp";
   const m = document.getElementById("marcaAtual");
@@ -558,8 +536,6 @@ async function arrancar(){
     },
     aoMudarEstado: e => { estado.sync = e; marcarNavegacao(router.actual().nome); }
   });
-  timer = criarTimer({store});
-  estado.timer = await timer.activo();
 
   router = criarRouter(ROTAS, () => pintar());
 
