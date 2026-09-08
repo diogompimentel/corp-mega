@@ -92,6 +92,16 @@ export function criarDataHub({graph, siteId, listas}){
    carteira continua, e o telemóvel diz o que não conseguiu ler. */
 const LISTAS = ["Projects", "Clients", "Tasks", "Consultations", "Conflicts",
                 "Collaborations", "Awards", "AppMeta"];
+
+/* Todas as Lists de que a app precisa, dita por quem as lê e escreve. O
+   «config.js» tinha a lista à mão e ficou para trás: faltavam-lhe
+   «ProjectFinance», «Collaborations» e «Awards», e o resultado não era um
+   erro — era uma carteira inteira sem honorários, sem faturado e sem por
+   faturar, com o ar de quem ainda não os tinha preenchido. Uma lista que o
+   código sabe de cor não se repete numa configuração. */
+export const LISTAS_NECESSARIAS = LISTAS.concat(
+  ["ProjectFinance", "NotesDecisions", "Commands", "Users", "AuditLog",
+   "Aliases", "SyncRuns"]);
 const CHAVE = {Projects:"projects", Clients:"clients", Tasks:"tasks",
                Consultations:"consultations", Conflicts:"quality",
                Collaborations:"collaborations", Awards:"awards", AppMeta:"meta"};

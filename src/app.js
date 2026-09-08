@@ -7,7 +7,7 @@ import {criarRouter} from "./router.js";
 import {criarStore} from "./store.js";
 import {criarSync, criarTimer, criarBootstrap, uuid} from "./sync.js";
 import {criarGraph} from "./graph.js";
-import {criarDataHub, descobrirSite, carregarCarteira} from "./datahub.js";
+import {criarDataHub, descobrirSite, carregarCarteira, LISTAS_NECESSARIAS} from "./datahub.js";
 import {construir, procurar} from "./search.js";
 import {podeVerFinanceiro, filtrar} from "./permissoes.js";
 import * as auth from "./auth.js";
@@ -60,6 +60,10 @@ function comRotulos(projetos){
   });
 }
 
+function ordenarCarteira(lista){
+  return (window.NUC && typeof window.NUC.ordenarProjetos === "function")
+    ? window.NUC.ordenarProjetos(lista) : (lista || []);
+}
 function projetoPorId(id){
   return estado.projetos.filter(p => p.id === id)[0] || null;
 }
@@ -84,7 +88,11 @@ function pintar(){
   const r = router.actual();
   /* Os valores são retirados do modelo antes de chegarem às vistas: esconder
      o separador e deixar os números na ficha não esconde nada. */
-  const projetos = filtrar(estado.projetos, estado.financeiro);
+  /* A ordem da carteira é a da casa — do número mais alto para o mais
+     baixo — e vem do Core, a mesma regra que o desktop aplica. O Data Hub
+     devolve os projetos pela ordem em que os escreveu, que não é ordem
+     nenhuma. */
+  const projetos = ordenarCarteira(filtrar(estado.projetos, estado.financeiro));
   const comum = {stale:estado.stale, lastSync:estado.lastSync, now:new Date().toISOString(),
                  projetos, semFinanceiro:!estado.financeiro};
   let html = "";
@@ -198,9 +206,20 @@ function ligarGestos(){
 
 async function executar(acao, dados){
   try{
-    if(acao === "abrir-projeto" || acao === "abrir-projeto") return router.ir("projeto", dados.projeto);
+    if(acao === "abrir-projeto") return router.ir("projeto", dados.projeto);
     if(acao === "abrir-tarefa" || acao === "concluir-tarefa") return concluirTarefa(dados.item);
-    if(acao === "resolver-qualidade") return router.ir("projetos");
+    /* Uma exceção de qualidade é sempre de um projeto: mandar quem lhe toca
+       para a lista de todos era fazê-lo procurar aquele que acabou de
+       carregar. Sem projeto — que acontece nas exceções da carteira — vale
+       a lista. */
+    if(acao === "resolver-qualidade")
+      return dados.projeto ? router.ir("projeto", dados.projeto) : router.ir("projetos");
+    if(acao === "definir-proxima-acao") return definirProximaAcao(dados.projeto);
+    /* As reuniões vêm do calendário, que o telemóvel ainda não lê — mas a
+       ação existe no Core e um dia chega cá. Sem tratamento, o botão não
+       fazia nada e não havia como saber porquê. */
+    if(acao === "abrir-reuniao")
+      return dados.projeto ? router.ir("projeto", dados.projeto) : router.ir("hoje");
     if(acao === "faturar" || acao === "cobrar") return router.ir("financeiro");
     if(acao === "nova-tarefa") return novaTarefa(dados.projeto);
     if(acao === "nova-nota") return novaNota(dados.projeto);
@@ -211,7 +230,7 @@ async function executar(acao, dados){
     if(acao === "sincronizar") return sincronizar();
     if(acao === "trocar-marca") return trocarMarca();
     if(acao === "ler-organizacao") return lerOrganizacao();
-    if(acao === "editar-publicacao") return editarPublicacao(item);
+    if(acao === "editar-publicacao") return editarPublicacao(dados.item);
     if(acao === "fechar-publicacao"){ estado.publicacaoEditando = null; return pintar(); }
     if(acao === "gravar-publicacao") return gravarPublicacao();
     if(acao === "nova-publicacao") return novaPublicacao();
@@ -399,14 +418,49 @@ async function mudarEstado(projectId){
     async novo => {
       if(!novo || novo === p.operationalState) return;
       p.operationalState = novo;
+      p.pendente = true;
       await store.put("projects", p);
-      await sync.mutate({type:"project.state", entity:"Projects", id:p.id,
-                         projectId:p.id, baseVersion:p.__etag || null,
-                         payload:{OperationalState:novo,
-                                  UpdatedAt:new Date().toISOString()}});
-      await actualizarPendentes();
+      /* Escrevia-se só a coluna do Data Hub, e a publicação seguinte
+         reescrevia-a a partir do disco: o estado mudado no telemóvel durava
+         quinze minutos e ninguém dava por isso. Agora vai por comando, e o
+         agente escreve-o no ficheiro do projeto. */
+      await mandarAoProjeto("project.state", p, novo);
       pintar();
     });
+}
+
+/* A próxima ação é a pergunta do «Hoje»: «o que é que isto está à espera
+   que aconteça». Escrevê-la só na coluna do Data Hub era escrevê-la na
+   areia — a publicação seguinte reescreve a coluna a partir do disco. Vai
+   por comando, com a pasta, e o agente aplica-a no ficheiro do projeto. */
+async function definirProximaAcao(projectId){
+  const p = projetoPorId(projectId);
+  if(!p) return;
+  folha("Próxima ação",
+    '<label for="a">O que tem de acontecer a seguir</label>'
+    + '<input type="text" id="a" data-valor value="' + (p.nextAction || "")
+    + '" placeholder="Entregar elementos à Câmara">',
+    async texto => {
+      if(!texto || texto === p.nextAction) return;
+      p.nextAction = texto;
+      p.pendente = true;
+      await store.put("projects", p);
+      await mandarAoProjeto("project.nextAction", p, texto);
+      pintar();
+    });
+}
+/* Um comando é a única escrita que chega ao ficheiro do projeto. Leva a
+   pasta porque é por ela que o Mac o encontra — procurar por semelhança de
+   nomes seria decidir uma identidade por parecença. */
+async function mandarAoProjeto(tipo, p, valor){
+  const id = uuid();
+  await sync.mutate({type:tipo, entity:"Commands", id, projectId:p.id,
+    payload:{Title:tipo, EntityId:id, Type:tipo, EntityRef:p.id, Status:"pending",
+             CreatedAt:new Date().toISOString(),
+             Payload:JSON.stringify({folderRef:p.folderRef, valor:valor,
+                                     quem:(estado.utilizador || {}).upn || null,
+                                     quando:new Date().toISOString()})}});
+  await actualizarPendentes();
 }
 
 async function alternarTimer(projectId){
@@ -548,7 +602,13 @@ async function arrancar(){
     try{
       const siteId = await descobrirSite(graph, cfg.siteHostname, cfg.sitePath);
       const provisorio = criarDataHub({graph, siteId, listas:{}});
-      const listas = await provisorio.descobrirListas(cfg.listas);
+      /* As Lists que a app precisa vêm do código, não da configuração:
+         acrescentar uma vista e esquecer o «config.js» dava um ecrã vazio
+         sem erro nenhum. O que estiver configurado junta-se, para uma
+         instalação poder ter mais. */
+      const listas = await provisorio.descobrirListas(
+        LISTAS_NECESSARIAS.concat(cfg.listas || [])
+          .filter((n, i, a) => a.indexOf(n) === i));
       hub = criarDataHub({graph, siteId, listas});
       const conta = auth.conta();
       const autorizado = await auth.autorizar(hub, conta.username);

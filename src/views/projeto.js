@@ -7,8 +7,13 @@
 import {esc, dinheiro, euros, fase, vazio} from "../formato.js";
 
 function morada(p){
-  const partes = [p.location, p.name].filter(Boolean).join(", ");
-  return partes ? "https://maps.apple.com/maps?q=" + encodeURIComponent(partes) : null;
+  /* Só a morada, e o país. O nome do projeto ia junto na procura — «Casa em
+     Pêra de Cima» não é um lugar, e misturá-lo com a rua fazia o mapa
+     aterrar onde calhava. Sem morada não há botão: um mapa que abre no
+     sítio errado é pior do que um mapa que não abre. */
+  if(!p.location) return null;
+  return "https://maps.apple.com/maps?q="
+    + encodeURIComponent(p.location + ", Portugal");
 }
 
 function linhaDinheiro(rotulo, valor){

@@ -22,6 +22,9 @@ function achatar(s){
 
 export function render(modelo){
   modelo = modelo || {};
+  /* A lista chega ordenada: quem a ordena é o «app.js», que é quem tem o
+     Core à mão. Uma vista que fosse buscar o «window» deixava de ser uma
+     função pura e de se poder provar sem browser. */
   const todos = modelo.projetos || [];
   const q = String(modelo.filtro || "").trim();
   /* Quarenta e seis linhas quase iguais — «fase por saber · Ação CO.RP» —

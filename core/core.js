@@ -363,6 +363,45 @@ function financeiro(f, saude){
   };
 }
 
+/* ---------- a ordem da carteira -----------------------------------------
+   A numeração da casa é a ordem do portfólio, do mais recente para o mais
+   antigo: o 47 está em cima porque é nele que se está a trabalhar, e o 01
+   em baixo porque acabou há anos. Estado e alertas ficam nas colunas — se
+   mudassem a posição, o projeto saltava de sítio de cada vez que algo lhe
+   acontecesse, e não se voltava a encontrar nada onde estava.
+
+   Vive aqui, e não na carteira do desktop onde nasceu, porque o telemóvel
+   precisa da mesma ordem e o build já lhe copia este ficheiro. Duas listas
+   dos mesmos projetos por ordens diferentes são duas carteiras.
+
+   Aceita as duas formas que existem: a linha da carteira, que já traz
+   «numero» e «nome», e o projeto canónico, que traz «folderRef». */
+NUC.numeroDoProjeto = function(ref){
+  var m = String(ref == null ? "" : ref).trim().match(/^(\d+)\s*[.\-]/);
+  return m ? parseInt(m[1], 10) : null;
+};
+function nomeParaOrdem(p){
+  p = p || {};
+  return String(p.nome || p.name || p.folderRef || p.pasta || "")
+    .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+function numeroParaOrdem(p){
+  p = p || {};
+  if(typeof p.numero === "number") return p.numero;
+  return NUC.numeroDoProjeto(p.folderRef || p.pasta || p.code || p.name || p.nome);
+}
+NUC.compararProjetos = function(a, b){
+  var na = numeroParaOrdem(a), nb = numeroParaOrdem(b);
+  if(na !== null && nb !== null && na !== nb) return nb - na;
+  if(na !== null && nb === null) return -1;
+  if(na === null && nb !== null) return 1;
+  var xa = nomeParaOrdem(a), xb = nomeParaOrdem(b);
+  return xa < xb ? -1 : (xa > xb ? 1 : 0);
+};
+NUC.ordenarProjetos = function(lista){
+  return (lista || []).slice().sort(NUC.compararProjetos);
+};
+
 NUC.projetoCanonico = function(input){
   input = input || {};
   var saude = lista(input.health).slice();
@@ -564,6 +603,27 @@ var PROGRESSO_OPERE = {
   adjudicado: 50, producao: 50, "em-producao": 50,
   "entregue-concluido": 100, entregue: 100, concluido: 100
 };
+/* O caminho de volta do rótulo para o estado que o produziu.
+
+   O telemóvel mostra o vocabulário canónico — «A aguardar cliente» — e é
+   isso que a pessoa escolhe. Quem escreve no projeto precisa do par que o
+   núcleo guarda: o estado e quem tem a bola. Sem esta função, cada sítio
+   que quisesse escrever inventava a sua tradução, e duas traduções da mesma
+   frase acabam por discordar.
+
+   «Ação CO.RP» e «Ação OPERE» são o mesmo estado em marcas diferentes: quem
+   tem a bola somos nós. */
+NUC.doEstadoOperacionalCanonico = function(rotulo){
+  var r = String(rotulo == null ? "" : rotulo).trim();
+  if(r === "Concluído") return {estado:"concluido", aguarda:""};
+  if(r === "Suspenso") return {estado:"suspenso", aguarda:""};
+  if(r === "A aguardar cliente") return {estado:"aguarda-terceiro", aguarda:"cliente"};
+  if(r === "A aguardar Câmara") return {estado:"aguarda-terceiro", aguarda:"camara-entidade"};
+  if(r === "A aguardar terceiros") return {estado:"aguarda-terceiro", aguarda:"outro"};
+  if(r === "Ação CO.RP" || r === "Ação OPERE") return {estado:"parado-corp", aguarda:"corp"};
+  return null;
+};
+
 NUC.progressoOpere = function(fase){
   var id = String(fase == null ? "" : fase).toLowerCase();
   return Object.prototype.hasOwnProperty.call(PROGRESSO_OPERE, id) ? PROGRESSO_OPERE[id] : null;
